@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Budget - Monthly Tracker</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { background:#f6f7fb; font-family:Segoe UI, Arial, sans-serif; }
+    .card { border-radius:12px; }
+    .big-figure { font-weight:700; font-size:1.2rem; }
+    .mini { font-size:0.9rem; color:#6c757d }
+    .donut-wrap { width:260px; height:260px; margin:0 auto; }
+    .controls .form-control { border-radius:8px; }
+    .history .list-group-item { display:flex; justify-content:space-between; align-items:center; }
+  </style>
+</head>
+<body>
+  <div class="container py-4">
+    <div class="row mb-3">
+      <div class="col-12 text-center">
+        <h2 class="mb-0">Monthly Budget</h2>
+        <p class="mini">Set a budget for a month and add expenses — the donut will move from green to red as you spend.</p>
+        <div class="mt-2">
+          <a href="/add_expense" class="btn btn-outline-primary btn-sm">➕ Add Expense</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-3">
+      <div class="col-lg-4">
+        <div class="card p-3">
+          <div class="mb-3">
+            <label class="form-label">Select Month</label>
+            <select id="monthSelect" class="form-select">
+              <option value="01">January</option>
+              <option value="02">February</option>
+              <option value="03">March</option>
+              <option value="04">April</option>
+              <option value="05">May</option>
+              <option value="06">June</option>
+              <option value="07">July</option>
+              <option value="08">August</option>
+              <option value="09">September</option>
+              <option value="10">October</option>
+              <option value="11">November</option>
+              <option value="12">December</option>
+            </select>
+          </div>
+
+          <form id="budgetForm" class="mb-3">
+            <label class="form-label">Monthly Budget (₹)</label>
+            <div class="input-group mb-2">
+              <span class="input-group-text">₹</span>
+              <input id="budgetInput" class="form-control" type="number" min="0" step="0.01" placeholder="Enter total budget" required />
+            </div>
+            <button class="btn btn-primary w-100" type="submit">Set Budget</button>
+          </form>
+
+          <hr />
+
+          <div class="mb-2">
+            <label class="form-label">Add Expense</label>
+            <div class="input-group mb-2">
+              <span class="input-group-text">₹</span>
+              <input id="expenseAmount" class="form-control" type="number" min="0" step="0.01" placeholder="Amount" />
+            </div>
+            <div class="d-grid gap-2 d-md-block">
+              <button id="addExpenseBtn" class="btn btn-danger">Add Expense</button>
+              <button id="clearBtn" class="btn btn-outline-secondary ms-2">Reset Month</button>
+            </div>
+          </div>
+
+          <hr />
+
+          <div>
+            <div class="mini">Total Budget</div>
+            <div id="displayBudget" class="big-figure">₹0.00</div>
+            <div class="mini mt-2">Total Spent <span id="displaySpent" class="float-end">₹0.00</span></div>
+            <div class="mini mt-2">Remaining <span id="displayRemaining" class="float-end">₹0.00</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-4 text-center">
+        <div class="card p-3">
+          <div class="donut-wrap">
+            <canvas id="donutChart" width="260" height="260"></canvas>
+          </div>
+          <div class="mt-3">
+            <div class="h5 mb-0" id="percentLabel">0%</div>
+            <div class="mini">of budget used</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-4">
+        <div class="card p-3">
+          <h6 class="mb-3">Expense History</h6>
+          <div id="historyList" class="list-group history small">No entries yet.</div>
+          <div class="mt-3 d-flex gap-2">
+            <button id="exportBtn" class="btn btn-outline-secondary btn-sm">Export CSV</button>
+            <button id="deleteAllBtn" class="btn btn-outline-danger btn-sm">Delete All</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+<script>
+// Simple monthly budget tracker with colored donut — server-connected
+const monthSelect = document.getElementById('monthSelect');
+const budgetInput = document.getElementById('budgetInput');
+const budgetForm = document.getElementById('budgetForm');
+const displayBudget = document.getElementById('displayBudget');
+const displaySpent = document.getElementById('displaySpent');
+const displayRemaining = document.getElementById('displayRemaining');
+const expenseAmount = document.getElementById('expenseAmount');
+const addExpenseBtn = document.getElementById('addExpenseBtn');
+const historyList = document.getElementById('historyList');
+const percentLabel = document.getElementById('percentLabel');
+const exportBtn = document.getElementById('exportBtn');
+const deleteAllBtn = document.getElementById('deleteAllBtn');
+const clearBtn = document.getElementById('clearBtn');
+
+// storage key pattern: budget_YYYY-MM
+function keyForMonth(month){
+  const y = new Date().getFullYear();
+  return `budget_${y}-${month}`;
+}
+
+// Only store budget locally. Expenses/history come from server API.
+function loadBudget(month){
+  const key = keyForMonth(month);
+  const raw = localStorage.getItem(key);
+  if(!raw) return 0;
+  try{ const o = JSON.parse(raw); return Number(o.budget||0); }catch(e){ return 0; }
+}
+function saveBudget(month, value){
+  const key = keyForMonth(month);
+  localStorage.setItem(key, JSON.stringify({budget: Number(value||0)}));
+}
+
+async function fetchExpensesFromServer(month){
+  try{
+    const y = new Date().getFullYear();
+    const monthStr = `${y}-${month}`;
+    const res = await fetch(`/api/expenses?month=${monthStr}`, { credentials: 'same-origin' });
+    if(!res.ok) return [];
+    const data = await res.json();
+    return data;
+  }catch(e){ console.error('fetchExpenses error', e); return []; }
+}
+
+// Chart setup
+const ctx = document.getElementById('donutChart').getContext('2d');
+let donutChart = new Chart(ctx, {
+  type: 'doughnut',
+  data: { labels:['Remaining','Spent'], datasets:[{ data:[1,0], backgroundColor:['#198754','#dc3545'] }] },
+  options:{
+    cutout:'70%',
+    animation:{ duration:600, easing:'easeOutCubic' },
+    plugins:{ legend:{ display:false } }
+  }
+});
+
+// Update UI from server + local budget
+async function render(month){
+  const budget = Number(loadBudget(month) || 0);
+  const expenses = await fetchExpensesFromServer(month);
+  const spent = expenses.reduce((s,e)=> s + Number(e.amount||0), 0);
+  const remaining = Number(budget - spent);
+
+  // update numbers
+  displayBudget.textContent = formatCurrency(budget);
+  displaySpent.textContent = formatCurrency(spent);
+  displayRemaining.textContent = formatCurrency(remaining);
+  // percent used
+  const percent = budget > 0 ? Math.min(100, Math.round((spent / budget)*100)) : (spent>0?100:0);
+  percentLabel.textContent = percent + '%';
+
+  // update donut data
+  const spentForChart = Math.min(budget, spent);
+  const remainingForChart = Math.max(0, budget - spentForChart);
+  donutChart.data.datasets[0].data = [remainingForChart, spentForChart];
+  donutChart.data.datasets[0].backgroundColor = ['#198754', '#dc3545'];
+  donutChart.update();
+
+  // history from server (most recent first)
+  if(Array.isArray(expenses) && expenses.length){
+    historyList.innerHTML = expenses.slice().reverse().map(h=>{
+      const when = new Date(h.date);
+      return `<div class="list-group-item"><div>${formatCurrency(h.amount)}</div><div class="small text-muted">${when.toLocaleString()} — ${escapeHtml(h.detail||'')}</div></div>`;
+    }).join('');
+  } else {
+    historyList.innerHTML = '<div class="text-muted small">No entries yet.</div>';
+  }
+
+  // color numeric displays: budget = green, spent = red, remaining green unless negative
+  displayBudget.style.color = '#198754';
+  displaySpent.style.color = '#dc3545';
+  displayRemaining.style.color = (remaining < 0) ? '#dc3545' : '#198754';
+}
+
+function formatCurrency(n){ return '₹'+Number(n||0).toLocaleString('en-IN',{minimumFractionDigits:2, maximumFractionDigits:2}); }
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// actions
+budgetForm.addEventListener('submit', (e)=>{
+  e.preventDefault();
+  const month = monthSelect.value;
+  saveBudget(month, Number(budgetInput.value || 0));
+  render(month);
+});
+
+// Add expense by POSTing to server API; date uses today's date
+addExpenseBtn.addEventListener('click', async ()=>{
+  const val = Number(expenseAmount.value || 0);
+  if(!val || val <= 0) return alert('Enter a valid amount');
+  const month = monthSelect.value;
+  const y = new Date().getFullYear();
+  const today = new Date();
+  const day = String(today.getDate()).padStart(2,'0');
+  const dateStr = `${y}-${month}-${day}`;
+  try{
+    const res = await fetch('/api/expenses', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ detail: 'Added from Budget', amount: val, date: dateStr })
+    });
+    if(!res.ok) throw new Error('Server error');
+    expenseAmount.value = '';
+    render(month);
+  }catch(err){
+    console.error(err);
+    alert('Could not add expense to server.');
+  }
+});
+
+exportBtn.addEventListener('click', async ()=>{
+  const month = monthSelect.value;
+  const y = new Date().getFullYear();
+  const monthStr = `${y}-${month}`;
+  try{
+    const res = await fetch(`/api/expenses?month=${monthStr}`, { credentials: 'same-origin' });
+    if(!res.ok) return alert('No data to export');
+    const data = await res.json();
+    if(!data || !data.length) return alert('No data to export');
+    const rows = [['timestamp','amount','detail']].concat(data.map(h=>[new Date(h.date).toISOString(), h.amount, h.detail]));
+    const csv = rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv],{type:'text/csv;charset=utf-8;'});
+    const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href=url; a.download=`expenses_${monthStr}.csv`; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+  }catch(e){ console.error(e); alert('Export failed'); }
+});
+
+// Delete all expenses for month (server-side) and keep budget as-is (confirm)
+deleteAllBtn.addEventListener('click', async ()=>{
+  if(!confirm('Delete all history for this month from server?')) return;
+  const month = monthSelect.value; const y = new Date().getFullYear(); const monthStr = `${y}-${month}`;
+  try{
+    const res = await fetch(`/api/expenses?month=${monthStr}`, { method: 'DELETE', credentials: 'same-origin' });
+    if(!res.ok) throw new Error('delete failed');
+    render(month);
+  }catch(e){ console.error(e); alert('Could not delete month data'); }
+});
+
+// Reset local budget for month (keeps server expenses)
+clearBtn.addEventListener('click', ()=>{
+  if(!confirm('Reset the budget for this month?')) return;
+  const month = monthSelect.value;
+  saveBudget(month, 0);
+  render(month);
+});
+
+monthSelect.addEventListener('change', ()=>{
+  const m = monthSelect.value;
+  budgetInput.value = loadBudget(m) || '';
+  render(m);
+});
+
+// init
+monthSelect.value = (new Date().getMonth()+1).toString().padStart(2,'0');
+budgetInput.value = loadBudget(monthSelect.value) || '';
+render(monthSelect.value);
+</script>
+</body>
+</html>

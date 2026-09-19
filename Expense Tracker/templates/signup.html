@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <title>Create account</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+  <style>
+    /* Center the card nicely */
+    body.auth-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #43cea2, #185a9d); /* greenish gradient */
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    /* Bigger, modern card */
+    .auth-card {
+      background: #fff;
+      width: 420px;
+      padding: 2.5rem;
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+      animation: fadeInUp 0.6s ease-out;
+      transform: translateY(20px);
+      opacity: 0;
+      animation-fill-mode: forwards;
+    }
+
+    @keyframes fadeInUp {
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+
+    .auth-title {
+      font-size: 1.8rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      text-align: center;
+      color: #333;
+    }
+
+    .auth-subtitle {
+      font-size: 1rem;
+      text-align: center;
+      margin-bottom: 1.5rem;
+      color: #666;
+    }
+
+    label {
+      font-weight: 500;
+      display: block;
+      margin-bottom: 0.3rem;
+      color: #444;
+    }
+
+    input[type="text"],
+    input[type="password"] {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 1rem;
+      transition: box-shadow 0.3s, border-color 0.3s;
+      margin-bottom: 1rem;
+    }
+
+    input:focus {
+      border-color: #43cea2;
+      box-shadow: 0 0 6px rgba(67, 206, 162, 0.5);
+      outline: none;
+    }
+
+    .pw-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .pw-toggle {
+      background: none;
+      border: none;
+      color: #43cea2;
+      font-weight: 500;
+      cursor: pointer;
+      transition: color 0.3s;
+    }
+
+    .pw-toggle:hover {
+      color: #2e8b57;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 0.9rem;
+      background: #43cea2;
+      color: #fff;
+      font-size: 1.1rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background-color 0.3s, transform 0.2s;
+    }
+
+    .btn:hover {
+      background-color: #2e8b57;
+      transform: translateY(-2px);
+    }
+
+    .btn:active {
+      transform: translateY(0);
+    }
+
+    .spinner {
+      border: 2px solid #f3f3f3;
+      border-top: 2px solid #fff;
+      border-radius: 50%;
+      width: 18px;
+      height: 18px;
+      animation: spin 0.8s linear infinite;
+      display: inline-block;
+    }
+
+    @keyframes spin {
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+
+    .secondary {
+      margin-top: 1rem;
+      text-align: center;
+      font-size: 0.95rem;
+    }
+
+    .secondary .link {
+      color: #43cea2;
+      font-weight: 500;
+      text-decoration: none;
+    }
+
+    .secondary .link:hover {
+      text-decoration: underline;
+    }
+
+    /* Flash messages */
+    .flash-list {
+      margin-bottom: 1rem;
+      padding: 0;
+      list-style: none;
+    }
+
+    .flash.error {
+      background: #ffe6e6;
+      color: #cc0000;
+      padding: 0.75rem;
+      border-radius: 6px;
+      font-size: 0.95rem;
+      animation: slideDown 0.4s ease-out;
+    }
+
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+  </style>
+</head>
+
+<body class="auth-container">
+  <main class="auth-card fade-in" role="main" aria-labelledby="signup-heading">
+    <h2 id="signup-heading" class="auth-title">Create your account</h2>
+    <p class="lead auth-subtitle">Sign up once and access all features. We'll keep you signed in.</p>
+
+    <!-- server flash messages -->
+    {% with messages = get_flashed_messages() %}
+    {% if messages %}
+    <ul class="flash-list" aria-live="polite">
+      {% for msg in messages %}
+      <li class="flash error">{{ msg }}</li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+    {% endwith %}
+
+    <form id="signup-form" method="POST" novalidate>
+      <input type="hidden" name="next" value="{{ next }}">
+
+      <div>
+        <label for="username">Username</label>
+        <input id="username" name="username" type="text" autocomplete="username" required
+          placeholder="Choose a username" autofocus>
+      </div>
+
+      <div>
+        <label for="password">Password</label>
+        <div class="pw-row">
+          <input id="password" name="password" type="password" autocomplete="new-password" required
+            placeholder="Create a password">
+          <button type="button" class="pw-toggle" id="toggle-pw" aria-label="Show password">Show</button>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn" id="submit-btn" type="submit">
+          <span id="btn-text">Sign up</span>
+          <span id="btn-spinner" style="display:none;" aria-hidden="true" class="spinner"></span>
+        </button>
+      </div>
+
+      <div class="secondary">
+        Already have an account? <a class="link" href="{{ url_for('login', next=next) }}">Log in</a>
+      </div>
+    </form>
+  </main>
+
+  <!-- If user is already logged in, redirect to next (or index) -->
+  {% if current_user %}
+  <script>
+    (function () {
+      var target = "{{ next or url_for('index') }}";
+      try { window.location.replace(target); } catch (e) { /* ignore */ }
+    })();
+  </script>
+  {% endif %}
+
+  <script>
+    (function () {
+      const form = document.getElementById('signup-form');
+      const btn = document.getElementById('submit-btn');
+      const btnText = document.getElementById('btn-text');
+      const spinner = document.getElementById('btn-spinner');
+      const pw = document.getElementById('password');
+      const toggle = document.getElementById('toggle-pw');
+
+      // Show/hide password
+      toggle.addEventListener('click', function () {
+        const isPw = pw.type === 'password';
+        pw.type = isPw ? 'text' : 'password';
+        toggle.textContent = isPw ? 'Hide' : 'Show';
+        toggle.setAttribute('aria-pressed', String(isPw));
+        pw.focus();
+      });
+
+      // UX: disable button + spinner while submitting and basic client validation
+      form.addEventListener('submit', function (e) {
+        if (!form.username.value.trim() || !form.password.value) {
+          if (document.querySelector('.flash-list') === null) {
+            const ul = document.createElement('ul');
+            ul.className = 'flash-list';
+            ul.innerHTML = '<li class="flash error">Please supply a username and password.</li>';
+            form.parentNode.insertBefore(ul, form);
+          }
+          e.preventDefault();
+          return;
+        }
+
+        btn.setAttribute('disabled', '');
+        spinner.style.display = '';
+        btnText.style.opacity = '0.0';
+      });
+    })();
+  </script>
+</body>
+
+</html>

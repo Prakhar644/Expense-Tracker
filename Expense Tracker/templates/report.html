@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Report</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body style="padding-top:40px;">
+    <!-- Navbar removed as requested -->
+
+    <div class="container">
+        <!-- show flash messages -->
+        {% with messages = get_flashed_messages() %}
+        {% if messages %}
+        <ul class="flashes">
+            {% for msg in messages %}
+            <li>{{ msg }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+        {% endwith %}
+
+        <!-- show header with login/logout -->
+        <header>
+            {% with messages = get_flashed_messages() %}
+            {% if messages %}
+            <ul class="flashes">
+                {% for msg in messages %}
+                <li>{{ msg }}</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+            {% endwith %}
+
+            {% if current_user %}
+            <div>
+                Welcome {{ current_user }} — <a href="{{ url_for('logout') }}">Logout</a>
+            </div>
+            {% else %}
+            <div>
+                <a href="{{ url_for('login', next=request.path) }}">Login</a>
+                or
+                <a href="{{ url_for('signup', next=request.path) }}">Sign up</a>
+                to use this feature
+            </div>
+            {% endif %}
+        </header>
+
+        <!-- main content: protected -->
+        {% if current_user %}
+        <div class="d-flex justify-content-between align-items-start mb-3">
+            <h2>Report</h2>
+            <div>
+                <a href="/" class="btn btn-secondary me-2">🏠 Home</a>
+                <a href="/add_sale" class="btn btn-outline-success me-1">Add Sale</a>
+                <a href="/add_expense" class="btn btn-outline-info">Add Expense</a>
+            </div>
+        </div>
+
+        <div class="mb-3 d-flex align-items-center">
+            <form method="get" class="me-3" id="rangeForm">
+                <label for="monthSelect" class="form-label me-2">Month:</label>
+                <div class="d-inline-flex align-items-center">
+                    <div class="dropdown me-1">
+                        <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="monthYearBtn"
+                            data-bs-toggle="dropdown" aria-expanded="false">Select month</button>
+                        <div class="dropdown-menu p-3" aria-labelledby="monthYearBtn" style="min-width:220px;">
+                            <div class="d-flex gap-2 mb-2">
+                                <select id="monthSelect" class="form-select w-50"></select>
+                                <select id="yearSelect" class="form-select w-50"></select>
+                            </div>
+                            <div class="d-flex justify-content-end">
+                                <button type="button" id="applyMonthYear" class="btn btn-primary btn-sm">Apply</button>
+                            </div>
+                        </div>
+                    </div>
+                    <input type="hidden" id="monthInput" name="month" value="{{ selected_month }}" />
+
+                    <button type="submit" class="btn btn-primary ms-2">Go</button>
+                </div>
+            </form>
+
+            <div>
+                <button id="showPie" class="btn btn-primary active">Show Pie Chart</button>
+                <button id="showBar" class="btn btn-primary">Show Bar Chart</button>
+                <a id="downloadCSV" class="btn btn-outline-secondary ms-2" href="#" role="button">Download CSV</a>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- LEFT COLUMN: pie/bar charts + monthly ledger -->
+            <div class="col-md-6 mb-4">
+                <!-- Pie/Bar Charts -->
+                <div class="d-flex flex-column align-items-center mb-4">
+                    <div class="card w-100 section-card">
+                        <div class="card-body">
+                            <h5 class="card-title">Sales vs Expenses</h5>
+                            <p class="muted-small">A quick distribution of sales and expenses for the selected month.
+                            </p>
+                            <canvas id="pieChart" width="480" height="480" class="chart-wrapper"></canvas>
+                            <canvas id="barChart" class="chart-wrapper" style="display:none;"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Monthly Ledger (stays on the left, below pie/bar) -->
+                    <div class="card w-100">
+                        <div class="card-body">
+                            <h5 class="card-title">Monthly Ledger</h5>
+                            <div style="max-height:300px; overflow:auto;">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Month</th>
+                                            <th class="text-end">Net Profit (₹)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% if monthly_summary is defined and monthly_summary %}
+                                        {% for label, profit in monthly_summary %}
+                                        <tr>
+                                            <td>{{ label }}</td>
+                                            <td class="text-end">{{ '%.2f' % profit }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                        {% else %}
+                                        <tr>
+                                            <td colspan="2" class="text-muted">No monthly summary available.</td>
+                                        </tr>
+                                        {% endif %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT COLUMN: sales summary + monthly profits (moved here) -->
+            <div class="col-md-6 mb-4">
+                <div class="card shadow-sm w-100 section-card">
+                    <div class="card-body">
+                        <h4 class="card-title text-primary">Sales Report Summary</h4>
+                        <p class="card-text">
+                            <strong>Total Sales:</strong> ₹{{ total_sales }}<br>
+                            <strong>Total Expenses:</strong> ₹{{ total_expenses }}<br>
+                            <strong>Net Profit:</strong> <span id="profitAmount" class="profit">₹0</span>
+                        </p>
+                        <hr>
+                        <p class="card-text muted-small">
+                            <em>Tip:</em> Compare the selected month with previous months to spot trends. Use the
+                            "Monthly Profits" chart below for an at-a-glance view.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Monthly Profits Chart (moved to right column below summary) -->
+                <div class="card w-100 section-card">
+                    <div class="card-body">
+                        <h5 class="card-title">Monthly Profits</h5>
+                        <p class="muted-small">Net profit per month across available history.</p>
+                        <canvas id="monthlyProfitsChart" style="max-width:100%; height:320px;"></canvas>
+                        <div id="profitArrows" class="mt-3" style="display:flex; gap:8px; flex-wrap:wrap;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ---------------- Additional long-form content starts here ---------------- -->
+
+        <hr>
+
+        <section id="details" class="mb-4">
+            <div class="card section-card">
+                <div class="card-body">
+                    <h4>Detailed Metrics</h4>
+                    <p class="muted-small">
+                        This dashboard aggregates raw sales and expense records into digestible metrics:
+                    </p>
+                    <ul class="muted-small">
+                        <li><strong>Total Sales:</strong> Sum of all sale totals for the selected period.</li>
+                        <li><strong>Total Expenses:</strong> Sum of all recorded expenses (salaries, deliveries,
+                            utilities, other).</li>
+                        <li><strong>Net Profit:</strong> Sales minus expenses. Negative values indicate a loss.</li>
+                        <li><strong>Monthly Trend:</strong> Compare the same month across years to detect seasonality.
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section id="interpretation" class="mb-4">
+            <div class="card section-card">
+                <div class="card-body">
+                    <h4>How to interpret these numbers</h4>
+                    <ol class="muted-small">
+                        <li>Look at the monthly profit bar chart to identify growth or declines month-over-month.</li>
+                        <li>If expenses are rising faster than sales, inspect categories (salaries, deliveries,
+                            utilities) to control spend.</li>
+                        <li>Use the pie chart on the left to understand where money is going in the selected month.</li>
+                        <li>Apply rolling averages (3-month or 12-month) for stable trend analysis — we can add that if
+                            you'd like.</li>
+                    </ol>
+                </div>
+            </div>
+        </section>
+
+        <section id="export" class="mb-4">
+            <div class="card section-card">
+                <div class="card-body">
+                    <h4>Export & Backup</h4>
+                    <p class="muted-small">
+                        You can export the displayed report as CSV for offline analysis and backup. It's a good practice
+                        to keep regular copies of your database file or use the included script at
+                        <code>scripts/dump_db.py</code>.
+                    </p>
+                    <ul class="muted-small">
+                        <li>CSV export will include month, sales, expenses and net profit.</li>
+                        <li>Back up your DB weekly or before major changes.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section id="faq" class="mb-4">
+            <div class="card section-card">
+                <div class="card-body">
+                    <h4>Frequently Asked Questions</h4>
+                    <div class="accordion" id="reportFaq">
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="faqOne">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                                    data-bs-target="#collapseOne">Can I export reports?</button>
+                            </h2>
+                            <div id="collapseOne" class="accordion-collapse collapse" data-bs-parent="#reportFaq">
+                                <div class="accordion-body muted-small">
+                                    Yes — use the CSV download button above. If you want Excel or scheduled exports we
+                                    can add a server-side job.
+                                </div>
+                            </div>
+
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="faqTwo">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                                        data-bs-target="#collapseTwo">How do I backup data?</button>
+                                </h2>
+                                <div id="collapseTwo" class="accordion-collapse collapse" data-bs-parent="#reportFaq">
+                                    <div class="accordion-body muted-small">
+                                        Use <code>scripts/dump_db.py</code> or periodically copy your database file. We
+                                        can wire a simple endpoint to trigger backups on demand.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="faqThree">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                                        data-bs-target="#collapseThree">Can I show charts on the homepage?</button>
+                                </h2>
+                                <div id="collapseThree" class="accordion-collapse collapse" data-bs-parent="#reportFaq">
+                                    <div class="accordion-body muted-small">
+                                        Yes — the homepage already has a placeholder chart. If you want real data there
+                                        we can add a small API endpoint to feed it.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+        </section>
+
+        <section id="testimonials" class="mb-4">
+            <div class="card section-card">
+                <div class="card-body">
+                    <h4>User Feedback</h4>
+                    <p class="muted-small"><strong>Ravi</strong> — "The monthly ledger helped me track profitability
+                        more accurately."</p>
+                    <p class="muted-small"><strong>Meera</strong> — "We identified unnecessary deliveries and cut costs
+                        by 10%."</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="contact" class="mb-4">
+            <div class="card section-card">
+                <div class="card-body">
+                    <h4>Contact & Next Steps</h4>
+                    <p class="muted-small">Need custom exports, scheduled reports, or multi-user access? Email <a
+                            href="mailto:support@example.com">support@example.com</a> with details and we'll scope it.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="text-center">
+            <div class="container">
+                <p class="mb-1">&copy; <span id="year"></span> Expense Tracking</p>
+                <small class="muted-small">Built for dealers — record, analyze, and grow.</small>
+            </div>
+        </footer>
+        {% else %}
+        <section id="report-locked">
+            <p>You must be logged in to view reports. Click Login or Sign up above to continue.</p>
+        </section>
+        {% endif %}
+    </div>
+
+    <!-- Back to top button -->
+    <button id="backToTop" class="btn btn-primary btn-lg rounded-circle" title="Back to top">↑</button>
+
+    <!-- Bootstrap JS (for accordion and interactive components) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script id="report-data" type="application/json">
+{{ {
+    "months": months | default([]),
+    "monthly_profits": monthly_profits | default([]),
+    "total_sales": total_sales | default(0),
+    "total_expenses": total_expenses | default(0),
+    "last_month_profit": last_month_profit | default(0),
+    "last_month_label": (last_month_label if last_month_label is not none else None),
+    "profit_change_pct": (profit_change_pct if profit_change_pct is not none else None),
+    "selected_month_label": selected_month_label | default('')
+} | tojson }}
+  </script>
+
+    <script>
+        // Show current year in footer
+        document.getElementById('year').textContent = new Date().getFullYear();
+
+        // Back-to-top button behavior
+        const backBtn = document.getElementById('backToTop');
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 300) {
+                backBtn.style.display = 'block';
+            } else {
+                backBtn.style.display = 'none';
+            }
+        });
+        backBtn.addEventListener('click', () => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Chart setup and data loading
+        const pieChartElement = document.getElementById('pieChart');
+        const barChartElement = document.getElementById('barChart');
+        const showPieBtn = document.getElementById('showPie');
+        const showBarBtn = document.getElementById('showBar');
+        const downloadCSVBtn = document.getElementById('downloadCSV');
+
+        // Backend-provided values are read from the JSON data blob
+        const dataTag = document.getElementById('report-data');
+        window._reportData = dataTag ? JSON.parse(dataTag.textContent) : {};
+        const months = window._reportData.months || [];
+        const profits = window._reportData.monthly_profits || [];
+        const _rd = window._reportData;
+        const total_sales = Number(_rd.total_sales || 0);
+
+        // Enhance month picker: single dropdown button with month+year selects
+        (function () {
+            const monthInputHidden = document.getElementById('monthInput');
+            const monthSelect = document.getElementById('monthSelect');
+            const yearSelect = document.getElementById('yearSelect');
+            const monthYearBtn = document.getElementById('monthYearBtn');
+            const applyBtn = document.getElementById('applyMonthYear');
+            if (!monthInputHidden || !monthSelect || !yearSelect || !monthYearBtn) return;
+
+            const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            for (let i = 1; i <= 12; i++) {
+                const v = (i < 10 ? '0' + i : '' + i);
+                const opt = document.createElement('option');
+                opt.value = v;
+                opt.textContent = monthLabels[i - 1];
+                monthSelect.appendChild(opt);
+            }
+
+            // Determine year range from available months if possible
+            let minYear, maxYear;
+            if (Array.isArray(window._reportData.months) && window._reportData.months.length) {
+                const years = window._reportData.months.map(m => {
+                    const mstr = String(m);
+                    const match = mstr.match(/(\d{4})/);
+                    return match ? Number(match[1]) : null;
+                }).filter(Boolean);
+                if (years.length) {
+                    minYear = Math.min(...years);
+                    maxYear = Math.max(...years);
+                }
+            }
+            const currentYear = new Date().getFullYear();
+            if (minYear === undefined || minYear > 2015) minYear = 2015;
+            if (maxYear === undefined || maxYear < currentYear) maxYear = currentYear;
+
+            for (let y = minYear; y <= maxYear; y++) {
+                const opt = document.createElement('option');
+                opt.value = String(y);
+                opt.textContent = String(y);
+                yearSelect.appendChild(opt);
+            }
+
+            // Set initial selection from hidden value (expected YYYY-MM) or fallback
+            const initial = monthInputHidden.value;
+            let selYear = String(currentYear);
+            let selMonth = (new Date().getMonth() + 1).toString().padStart(2, '0');
+            if (initial && /^\d{4}-\d{2}$/.test(initial)) {
+                selYear = initial.slice(0, 4);
+                selMonth = initial.slice(5, 7);
+            }
+            if (Number(selYear) < minYear) selYear = String(minYear);
+            if (Number(selYear) > maxYear) selYear = String(maxYear);
+            monthSelect.value = selMonth;
+            yearSelect.value = selYear;
+
+            function updateBtn() {
+                const mText = monthSelect.options[monthSelect.selectedIndex] ? monthSelect.options[monthSelect.selectedIndex].text : monthSelect.value;
+                monthYearBtn.textContent = mText + ' ' + yearSelect.value;
+            }
+
+            function syncHidden() {
+                monthInputHidden.value = yearSelect.value + '-' + monthSelect.value;
+                updateBtn();
+            }
+
+            monthSelect.addEventListener('change', syncHidden);
+            yearSelect.addEventListener('change', syncHidden);
+
+            if (applyBtn) {
+                applyBtn.addEventListener('click', function () {
+                    syncHidden();
+                    // close dropdown (Bootstrap 5)
+                    try { var dd = bootstrap.Dropdown.getInstance(monthYearBtn) || bootstrap.Dropdown.getOrCreateInstance(monthYearBtn); dd.hide(); } catch (e) { }
+                });
+            }
+
+            // initialize
+            syncHidden();
+        })();
+        const total_expenses = Number(_rd.total_expenses || 0);
+        const last_month_profit = Number(_rd.last_month_profit || 0);
+
+        const chartData = {
+            labels: ["Sales", "Expenses"],
+            datasets: [{
+                label: "Amount",
+                data: [total_sales, total_expenses],
+                backgroundColor: ["#4CAF50", "#F44336"]
+            }]
+        };
+
+        // Pie Chart
+        const pieChart = new Chart(pieChartElement, {
+            type: "pie",
+            data: chartData
+        });
+
+        // Bar Chart
+        const barChart = new Chart(barChartElement, {
+            type: "bar",
+            data: chartData,
+            options: {
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+
+        // Monthly Profits Chart
+        const ctx = document.getElementById('monthlyProfitsChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: months,
+                datasets: [{
+                    label: 'Profit',
+                    data: profits,
+                    backgroundColor: profits.map(v => v < 0 ? 'rgba(255,99,132,0.7)' : 'rgba(54,162,235,0.7)'),
+                    borderColor: profits.map(v => v < 0 ? 'rgba(255,99,132,1)' : 'rgba(54,162,235,1)'),
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function (context) {
+                                const val = context.parsed.y;
+                                return '₹' + val.toFixed(2);
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+
+        // Updated toggle handlers with active state
+        showPieBtn.onclick = function () {
+            pieChartElement.style.display = '';
+            barChartElement.style.display = 'none';
+            // Toggle active states
+            showPieBtn.classList.add('active');
+            showBarBtn.classList.remove('active');
+        };
+        showBarBtn.onclick = function () {
+            pieChartElement.style.display = 'none';
+            barChartElement.style.display = '';
+            // Toggle active states
+            showBarBtn.classList.add('active');
+            showPieBtn.classList.remove('active');
+        };
+
+        // Download CSV logic
+        downloadCSVBtn.onclick = function (e) {
+            e.preventDefault();
+            const rows = [["Month", "Sales", "Expenses", "Profit"]];
+            if (window._reportData.months && window._reportData.months.length) {
+                const monthsArr = window._reportData.months;
+                const profitsArr = window._reportData.monthly_profits || [];
+                for (let i = 0; i < monthsArr.length; i++) {
+                    const m = monthsArr[i];
+                    const p = profitsArr[i] || 0;
+                    rows.push([m, "", "", p]);
+                }
+            } else {
+                rows.push(["Selected", total_sales, total_expenses, (total_sales - total_expenses)]);
+            }
+            const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'report_export.csv';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+        };
+
+        // Calculate and display profit
+        const profit = total_sales - total_expenses;
+        const profitAmountElement = document.getElementById('profitAmount');
+
+        if (profit < 0) {
+            profitAmountElement.classList.remove('gain');
+            profitAmountElement.classList.add('loss');
+            profitAmountElement.textContent = `Loss: ₹${Math.abs(profit)}`;
+        } else {
+            profitAmountElement.classList.remove('loss');
+            profitAmountElement.classList.add('gain');
+            profitAmountElement.textContent = `Profit: ₹${profit}`;
+        }
+
+        // Add arrows for profit growth/decline
+        const arrowsDiv = document.getElementById('profitArrows');
+        arrowsDiv.innerHTML = months.map((month, i) => {
+            if (i === 0) return `<div style='text-align:center;min-width:80px;'>${month}<br><span style='font-size:20px;'>&#8594;</span></div>`;
+            const up = profits[i] > profits[i - 1];
+            const arrow = up ? "&#8593;" : profits[i] < profits[i - 1] ? "&#8595;" : "&#8594;";
+            const color = up ? "green" : profits[i] < profits[i - 1] ? "red" : "gray";
+            return `<div style='text-align:center;min-width:80px;'>${month}<br><span style='font-size:20px;color:${color};'>${arrow}</span></div>`;
+        }).join("");
+
+        // Show previous month label and percentage change
+        const compNode = document.createElement('div');
+        compNode.style.marginTop = '6px';
+        const lastMonthLabel = (_rd.last_month_label === undefined || _rd.last_month_label === null) ? null : _rd.last_month_label;
+        const profitChangePct = (_rd.profit_change_pct === undefined || _rd.profit_change_pct === null) ? null : _rd.profit_change_pct;
+        if (profitChangePct !== null) {
+            let pctText = Math.abs(profitChangePct).toFixed(1) + '%';
+            if (profitChangePct > 0) {
+                compNode.innerHTML = `<small class="text-success">▲ Profit up from ${lastMonthLabel} (₹${last_month_profit}, +${pctText})</small>`;
+            } else if (profitChangePct < 0) {
+                compNode.innerHTML = `<small class="text-danger">▼ Profit down from ${lastMonthLabel} (₹${last_month_profit}, ${pctText})</small>`;
+            } else {
+                compNode.innerHTML = `<small class="text-muted">— Profit same as ${lastMonthLabel} (₹${last_month_profit})</small>`;
+            }
+        } else {
+            compNode.innerHTML = `<small class="text-muted">— No previous month data</small>`;
+        }
+        profitAmountElement.parentNode.appendChild(compNode);
+    </script>
+</body>
+
+</html>

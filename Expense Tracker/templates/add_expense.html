@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Add Expense</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body class="pt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0">Add Expense</h2>
+    <div>
+      <a href="/" class="btn btn-secondary">🏠 Home</a>
+      <a href="/add_sale" class="btn btn-outline-primary ms-2">➕ Add Sale</a>
+      <a href="/Budget" class="btn btn-outline-success ms-2">💰 Budget</a>
+    </div>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+  {% for category, message in messages %}
+  <div class="alert alert-{{ category }}">{{ message }}</div>
+  {% endfor %}
+  {% endif %}
+  {% endwith %}
+
+  <form method="post" class="mb-4 expense-form" id="expenseForm">
+    <input type="hidden" name="detail" id="detailInput" value="">
+
+    <select class="form-control mb-2" id="category" name="category" required>
+      <option value="">Select Category</option>
+      <option value="staff">Staff Expenses</option>
+      <option value="delivery">Delivery Expenses</option>
+      <option value="misc">Electricity Bill</option>
+      <option value="rents">Rents</option>
+      <option value="vehicle">Vehicle Fare</option>
+      <option value="staff_commodities">Staff Commodities</option>
+    </select>
+
+    <!-- Staff Expenses -->
+    <div id="staffFields" class="collapsible" aria-hidden="true">
+      <select class="form-control mb-2" id="staffType">
+        <option value="">Select Staff Expense Type</option>
+        <option value="simple">Simple Staff Expense</option>
+        <option value="detail">More Detail Staff Expense</option>
+      </select>
+
+      <!-- Simple Staff Expense -->
+      <div id="simpleStaffFields" class="collapsible" aria-hidden="true">
+        <input class="form-control" type="number" id="numStaff" placeholder="Number of Staff">
+        <input class="form-control" type="number" step="0.01" id="staffSalary" placeholder="Per Person Salary">
+        <input class="form-control" type="number" step="0.01" id="staffTotal" placeholder="Total Salary" readonly>
+
+      </div>
+
+      <!-- More Detail Staff Expense -->
+      <div id="detailStaffFields" class="collapsible" aria-hidden="true">
+        <input class="form-control" type="text" id="staffName" placeholder="Staff Name">
+        <input class="form-control" type="text" id="staffId" placeholder="Staff ID">
+        <input class="form-control" type="number" id="staffHours" placeholder="Hours Worked (1 week)">
+        <input class="form-control" type="number" step="0.01" id="staffPerHour" placeholder="Per Hour Salary">
+        <input class="form-control" type="number" step="0.01" id="staffDetailTotal" placeholder="Total Salary" readonly>
+
+      </div>
+    </div>
+
+    <!-- Delivery Expenses -->
+    <div id="deliveryFields" class="collapsible" aria-hidden="true">
+      <input class="form-control" type="number" id="numDriver" placeholder="Number of Drivers">
+      <input class="form-control" type="number" step="0.01" id="driverSalary" placeholder="Per Driver Salary">
+      <input class="form-control" type="number" step="0.01" id="deliveryTotal" placeholder="Total Salary" readonly>
+
+    </div>
+
+    <!-- Miscellaneous Expenses -->
+    <div id="miscFields" class="collapsible" aria-hidden="true">
+      <input class="form-control" type="number" id="units" placeholder="Units Consumed">
+      <input class="form-control" type="number" step="0.01" id="unitPrice" placeholder="Per Unit Price">
+      <input class="form-control" type="number" step="0.01" id="miscTotal" placeholder="Total Amount" readonly>
+
+    </div>
+
+    <!-- Rents -->
+    <div id="rentsFields" class="collapsible" aria-hidden="true">
+      <input class="form-control" type="text" id="rentProperty" placeholder="Property / Location">
+      <input class="form-control" type="number" id="rentMonths" placeholder="Months">
+      <input class="form-control" type="number" step="0.01" id="rentMonthly" placeholder="Monthly Rent">
+
+
+    </div>
+
+    <!-- Vehicle Fare -->
+    <div id="vehicleFields" class="collapsible" aria-hidden="true">
+      <input class="form-control" type="number" id="numVehicles" placeholder="Number of Vehicles">
+      <input class="form-control" type="number" step="0.01" id="farePer" placeholder="Per Vehicle Fare">
+      <input class="form-control" type="number" step="0.01" id="vehicleTotal" placeholder="Total Amount" readonly>
+
+    </div>
+
+    <!-- Staff Commodities -->
+    <div id="staffComFields" class="collapsible" aria-hidden="true">
+      <input class="form-control" type="text" id="commodityName" placeholder="Commodity Name">
+      <input class="form-control" type="number" id="commodityQty" placeholder="Quantity">
+      <input class="form-control" type="number" step="0.01" id="commodityUnit" placeholder="Unit Price">
+      <input class="form-control" type="number" step="0.01" id="commodityTotal" placeholder="Total Amount" readonly>
+
+    </div>
+
+    <input class="form-control mt-2" type="date" name="date" required>
+    <button class="btn btn-success mt-3" type="submit">Save</button>
+  </form>
+
+  <h3 class="mt-3">All Expenses</h3>
+  <table class="table table-striped">
+    <tr>
+      <th>ID</th>
+      <th>Detail</th>
+      <th>Amount</th>
+      <th>Date</th>
+      <th>Action</th>
+    </tr>
+    {% for expense in expenses %}
+    <tr>
+      <td>{{ expense[0] }}</td>
+      <td>{{ expense[1] }}</td>
+      <td>{{ expense[2] }}</td>
+      <td>{{ expense[3] }}</td>
+      <td><a href="/delete_expense/{{ expense[0] }}" class="btn btn-sm btn-danger">Delete</a></td>
+    </tr>
+    {% endfor %}
+  </table>
+
+  <script>
+    (function () {
+      // small helpers
+      const TRANSITION_MS = 380;
+
+      function get(id) { return document.getElementById(id); }
+
+      function showElement(id) {
+        const el = get(id);
+        if (!el) return;
+        // if already visible, ensure class present
+        el.style.display = 'block';
+        // ensure next frame for transition to work
+        window.requestAnimationFrame(() => {
+          el.classList.add('show');
+          el.setAttribute('aria-hidden', 'false');
+        });
+      }
+
+      function hideElement(id) {
+        const el = get(id);
+        if (!el) return;
+        el.classList.remove('show');
+        el.setAttribute('aria-hidden', 'true');
+        // after transition, hide from flow
+        setTimeout(() => {
+          // only hide if still not .show
+          if (!el.classList.contains('show')) el.style.display = 'none';
+        }, TRANSITION_MS + 20);
+      }
+
+      function toggleShow(id, shouldShow) {
+        if (shouldShow) showElement(id); else hideElement(id);
+      }
+
+      // Helper to safely remove/set name
+      function removeNameIf(elId) {
+        const el = get(elId);
+        if (el) el.removeAttribute('name');
+      }
+      function setNameIf(elId, name) {
+        const el = get(elId);
+        if (el) el.setAttribute('name', name);
+      }
+
+      // initial state: hide all collapsibles except manualFields
+      ['staffFields', 'deliveryFields', 'miscFields', 'rentsFields', 'vehicleFields', 'staffComFields',
+        'simpleStaffFields', 'detailStaffFields'].forEach(id => {
+          const el = get(id);
+          if (el) {
+            el.classList.remove('show');
+            el.style.display = 'none';
+            el.setAttribute('aria-hidden', 'true');
+          }
+        });
+
+      // initial remove for all totals so they don't submit accidentally
+      ['staffTotal', 'staffDetailTotal', 'deliveryTotal', 'miscTotal', 'rentTotal', 'vehicleTotal', 'commodityTotal'].forEach(removeNameIf);
+
+      // keep label fields non-submitting
+      ['staffSimpleLabel', 'staffDetailLabel', 'deliveryLabel', 'miscLabel', 'rentLabel', 'vehicleLabel', 'commodityLabel'].forEach(function (id) {
+        const el = get(id);
+        if (el) el.removeAttribute('name');
+      });
+
+      // Update canonical detail hidden input
+      function updateDetailForCategory(cat) {
+        const detailEl = get('detailInput');
+        if (!detailEl) return;
+        if (cat === 'staff') {
+          const typeEl = get('staffType');
+          const type = typeEl ? typeEl.value : '';
+          detailEl.value = (type === 'detail') ? 'Detailed Staff Salary' : 'Staff Salary';
+        } else if (cat === 'delivery') {
+          detailEl.value = (get('deliveryLabel') && get('deliveryLabel').value) || 'Driver Salary';
+        } else if (cat === 'misc') {
+          detailEl.value = (get('miscLabel') && get('miscLabel').value) || 'Electricity Bill';
+        } else if (cat === 'rents') {
+          detailEl.value = (get('rentLabel') && get('rentLabel').value) || 'Rent';
+        } else if (cat === 'vehicle') {
+          detailEl.value = (get('vehicleLabel') && get('vehicleLabel').value) || 'Vehicle Fare';
+        } else if (cat === 'staff_commodities') {
+          const name = (get('commodityName') && get('commodityName').value) || '';
+          detailEl.value = (name ? (name + ' - ') : '') + ((get('commodityLabel') && get('commodityLabel').value) || 'Staff Commodities');
+        } else {
+          // manual
+          detailEl.value = (get('manualDetail') && get('manualDetail').value) || '';
+        }
+      }
+
+      // category change handler
+      const categoryEl = get('category');
+      if (categoryEl) {
+        categoryEl.addEventListener('change', function () {
+          const sel = this.value;
+          // hide all groups first
+          ['staffFields', 'deliveryFields', 'miscFields', 'rentsFields', 'vehicleFields', 'staffComFields'].forEach(id => hideElement(id));
+
+          // Remove name from totals
+          ['staffTotal', 'staffDetailTotal', 'deliveryTotal', 'miscTotal', 'rentTotal', 'vehicleTotal', 'commodityTotal'].forEach(removeNameIf);
+
+          // Remove required from manual
+          const manualDetail = document.querySelector('#manualFields input[id="manualDetail"]');
+          const manualAmount = document.querySelector('#manualFields input[name="amount"]');
+          if (manualDetail) manualDetail.removeAttribute('required');
+          if (manualAmount) manualAmount.removeAttribute('required');
+
+          if (sel === 'staff') {
+            showElement('staffFields');
+            // reset staff type and hide internals
+            const st = get('staffType'); if (st) st.value = '';
+            hideElement('simpleStaffFields'); hideElement('detailStaffFields');
+            removeNameIf('staffTotal'); removeNameIf('staffDetailTotal');
+          } else if (sel === 'delivery') {
+            showElement('deliveryFields'); setNameIf('deliveryTotal', 'amount');
+          } else if (sel === 'misc') {
+            showElement('miscFields'); setNameIf('miscTotal', 'amount');
+          } else if (sel === 'rents') {
+            showElement('rentsFields'); setNameIf('rentTotal', 'amount');
+          } else if (sel === 'vehicle') {
+            showElement('vehicleFields'); setNameIf('vehicleTotal', 'amount');
+          } else if (sel === 'staff_commodities') {
+            showElement('staffComFields'); setNameIf('commodityTotal', 'amount');
+          } else {
+            // manual
+            // add required back to manual fields
+            if (manualDetail) manualDetail.setAttribute('required', 'required');
+            if (manualAmount) manualAmount.setAttribute('required', 'required');
+          }
+
+          updateDetailForCategory(sel);
+        });
+      }
+
+      // staff type selection
+      const staffType = get('staffType');
+      if (staffType) {
+        staffType.addEventListener('change', function () {
+          const v = this.value;
+          hideElement('simpleStaffFields'); hideElement('detailStaffFields');
+          removeNameIf('staffTotal'); removeNameIf('staffDetailTotal');
+
+          if (v === 'simple') {
+            showElement('simpleStaffFields'); setNameIf('staffTotal', 'amount');
+          } else if (v === 'detail') {
+            showElement('detailStaffFields'); setNameIf('staffDetailTotal', 'amount');
+          }
+          updateDetailForCategory('staff');
+        });
+      }
+
+      // wiring for manual detail and commodity name to update hidden detail
+      const manualDetailInput = get('manualDetail');
+      if (manualDetailInput) manualDetailInput.addEventListener('input', () => updateDetailForCategory('manual'));
+
+      const commodityName = get('commodityName');
+      if (commodityName) commodityName.addEventListener('input', () => updateDetailForCategory('staff_commodities'));
+
+      // calculation helpers (safely attach only if elements exist)
+      function attachInput(id, fn) {
+        const el = get(id);
+        if (el) el.addEventListener('input', fn);
+      }
+
+      function highlightTotalById(totalId) {
+        const el = get(totalId);
+        if (!el) return;
+        el.classList.add('total-highlight');
+        setTimeout(() => el.classList.remove('total-highlight'), 560);
+      }
+
+      // staff simple
+      attachInput('numStaff', calcStaffTotal);
+      attachInput('staffSalary', calcStaffTotal);
+      function calcStaffTotal() {
+        const num = parseFloat((get('numStaff') && get('numStaff').value) || 0) || 0;
+        const salary = parseFloat((get('staffSalary') && get('staffSalary').value) || 0) || 0;
+        const out = (num * salary).toFixed(2);
+        if (get('staffTotal')) get('staffTotal').value = out;
+        highlightTotalById('staffTotal');
+      }
+
+      // staff detail
+      attachInput('staffHours', calcStaffDetailTotal);
+      attachInput('staffPerHour', calcStaffDetailTotal);
+      function calcStaffDetailTotal() {
+        const hours = parseFloat((get('staffHours') && get('staffHours').value) || 0) || 0;
+        const perHour = parseFloat((get('staffPerHour') && get('staffPerHour').value) || 0) || 0;
+        const out = (hours * perHour).toFixed(2);
+        if (get('staffDetailTotal')) get('staffDetailTotal').value = out;
+        highlightTotalById('staffDetailTotal');
+      }
+
+      // delivery
+      attachInput('numDriver', calcDeliveryTotal);
+      attachInput('driverSalary', calcDeliveryTotal);
+      function calcDeliveryTotal() {
+        const num = parseFloat((get('numDriver') && get('numDriver').value) || 0) || 0;
+        const salary = parseFloat((get('driverSalary') && get('driverSalary').value) || 0) || 0;
+        const out = (num * salary).toFixed(2);
+        if (get('deliveryTotal')) get('deliveryTotal').value = out;
+        highlightTotalById('deliveryTotal');
+      }
+
+      // misc
+      attachInput('units', calcMiscTotal);
+      attachInput('unitPrice', calcMiscTotal);
+      function calcMiscTotal() {
+        const u = parseFloat((get('units') && get('units').value) || 0) || 0;
+        const p = parseFloat((get('unitPrice') && get('unitPrice').value) || 0) || 0;
+        const out = (u * p).toFixed(2);
+        if (get('miscTotal')) get('miscTotal').value = out;
+        highlightTotalById('miscTotal');
+      }
+
+      // rent
+      attachInput('rentMonths', calcRentTotal);
+      attachInput('rentMonthly', calcRentTotal);
+      function calcRentTotal() {
+        const m = parseFloat((get('rentMonths') && get('rentMonths').value) || 0) || 0;
+        const monthly = parseFloat((get('rentMonthly') && get('rentMonthly').value) || 0) || 0;
+        const out = (m * monthly).toFixed(2);
+        if (get('rentTotal')) get('rentTotal').value = out;
+        highlightTotalById('rentTotal');
+      }
+
+      // vehicle
+      attachInput('numVehicles', calcVehicleTotal);
+      attachInput('farePer', calcVehicleTotal);
+      function calcVehicleTotal() {
+        const n = parseFloat((get('numVehicles') && get('numVehicles').value) || 0) || 0;
+        const fare = parseFloat((get('farePer') && get('farePer').value) || 0) || 0;
+        const out = (n * fare).toFixed(2);
+        if (get('vehicleTotal')) get('vehicleTotal').value = out;
+        highlightTotalById('vehicleTotal');
+      }
+
+      // commodity
+      attachInput('commodityQty', calcCommodityTotal);
+      attachInput('commodityUnit', calcCommodityTotal);
+      function calcCommodityTotal() {
+        const q = parseFloat((get('commodityQty') && get('commodityQty').value) || 0) || 0;
+        const u = parseFloat((get('commodityUnit') && get('commodityUnit').value) || 0) || 0;
+        const out = (q * u).toFixed(2);
+        if (get('commodityTotal')) get('commodityTotal').value = out;
+        highlightTotalById('commodityTotal');
+      }
+
+      // before submit ensure detailInput is populated
+      const form = get('expenseForm');
+      if (form) {
+        form.addEventListener('submit', function (e) {
+          const cat = (get('category') && get('category').value) || 'manual';
+          updateDetailForCategory(cat || 'manual');
+
+          // show a small disabled state on the button for feedback
+          const btn = this.querySelector('button[type="submit"]') || this.querySelector('button');
+          if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = 'Saving...';
+          }
+        });
+      }
+
+      // Initialize ARIA/display states correctly for manualFields (we start with manual visible)
+      // manualFields already has class show in markup by default; ensure it's visible
+      const mf = get('manualFields');
+      if (mf) {
+        mf.style.display = 'block';
+        mf.classList.add('show');
+        mf.setAttribute('aria-hidden', 'false');
+      }
+
+    })();
+  </script>
+</body>
+
+</html>

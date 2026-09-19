@@ -1,0 +1,1018 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <title>Expense Tracking</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <style>
+    body {
+      min-height: 100vh;
+      overflow-y: auto;
+      scroll-behavior: smooth;
+    }
+
+    /* ===== CLAYMORPHISM STYLES ===== */
+    /* Cards - Claymorphic Design */
+    .card {
+      border: none !important;
+      border-radius: 24px !important;
+      background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%) !important;
+      box-shadow: 8px 8px 20px rgba(0, 0, 0, 0.08), 
+                  -5px -5px 15px rgba(255, 255, 255, 0.7),
+                  inset -2px -2px 8px rgba(0, 0, 0, 0.04) !important;
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+    }
+
+    .card:hover {
+      box-shadow: 12px 12px 28px rgba(0, 0, 0, 0.12), 
+                  -8px -8px 20px rgba(255, 255, 255, 0.8),
+                  inset -2px -2px 8px rgba(0, 0, 0, 0.04) !important;
+      transform: translateY(-6px) !important;
+    }
+
+    .card-header {
+      border-radius: 24px 24px 0 0 !important;
+      border: none !important;
+    }
+
+    /* Buttons - Claymorphic Design */
+    .btn {
+      border: none !important;
+      border-radius: 16px !important;
+      font-weight: 600 !important;
+      padding: 10px 24px !important;
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+      box-shadow: 6px 6px 16px rgba(0, 0, 0, 0.1), 
+                  -4px -4px 12px rgba(255, 255, 255, 0.6) !important;
+      position: relative !important;
+    }
+
+    .btn:hover,
+    .btn:focus {
+      box-shadow: 8px 8px 20px rgba(0, 0, 0, 0.14), 
+                  -5px -5px 15px rgba(255, 255, 255, 0.7),
+                  inset 2px 2px 6px rgba(0, 0, 0, 0.05) !important;
+      transform: translateY(-3px) scale(1.05) !important;
+    }
+
+    .btn:active {
+      box-shadow: inset 4px 4px 12px rgba(0, 0, 0, 0.1), 
+                  inset -2px -2px 8px rgba(255, 255, 255, 0.5) !important;
+      transform: translateY(-1px) scale(0.98) !important;
+    }
+
+    .btn-success {
+      background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important;
+      color: #fff !important;
+    }
+
+    .btn-outline-success {
+      color: #28a745 !important;
+      background: linear-gradient(135deg, rgba(40, 167, 69, 0.05), rgba(32, 201, 151, 0.05)) !important;
+      border: 2px solid #28a745 !important;
+    }
+
+    .btn-outline-success:hover {
+      background: linear-gradient(135deg, #28a745, #20c997) !important;
+      color: #fff !important;
+      border-color: #28a745 !important;
+    }
+
+    .btn-outline-primary {
+      color: #0d6efd !important;
+      background: linear-gradient(135deg, rgba(13, 110, 253, 0.05), rgba(0, 123, 255, 0.05)) !important;
+      border: 2px solid #0d6efd !important;
+    }
+
+    .btn-outline-primary:hover {
+      background: linear-gradient(135deg, #0d6efd, #0056b3) !important;
+      color: #fff !important;
+      border-color: #0d6efd !important;
+    }
+
+    .btn-outline-info {
+      color: #0dcaf0 !important;
+      background: linear-gradient(135deg, rgba(13, 202, 240, 0.05), rgba(0, 180, 215, 0.05)) !important;
+      border: 2px solid #0dcaf0 !important;
+    }
+
+    .btn-outline-info:hover {
+      background: linear-gradient(135deg, #0dcaf0, #0099cc) !important;
+      color: #fff !important;
+      border-color: #0dcaf0 !important;
+    }
+
+    .btn-outline-warning {
+      color: #ffc107 !important;
+      background: linear-gradient(135deg, rgba(255, 193, 7, 0.05), rgba(255, 211, 0, 0.05)) !important;
+      border: 2px solid #ffc107 !important;
+    }
+
+    .btn-outline-warning:hover {
+      background: linear-gradient(135deg, #ffc107, #ffb300) !important;
+      color: #000 !important;
+      border-color: #ffc107 !important;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #0d6efd 0%, #0056b3 100%) !important;
+      color: #fff !important;
+    }
+
+    .btn-lg {
+      border-radius: 18px !important;
+      padding: 12px 28px !important;
+    }
+
+    /* ===== END CLAYMORPHISM STYLES ===== */
+
+    .hover-glow {
+      transition: box-shadow 0.2s, transform 0.2s;
+    }
+
+    .hover-glow:hover {
+      box-shadow: 0 0 20px rgba(0, 123, 255, 0.3), 0 2px 8px rgba(0, 0, 0, 0.15);
+      transform: translateY(-2px) scale(1.03);
+      z-index: 2;
+    }
+
+    .info-section {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      font-size: 1.08em;
+      margin-top: 2rem;
+    }
+
+    .navbar-brand {
+      display: inline-block;
+      transition: color 0.2s, text-shadow 0.2s;
+      font-weight: bold;
+      letter-spacing: 2px;
+      color: #fff !important;
+    }
+
+    .navbar-brand span {
+      display: inline-block;
+      transition: color 0.2s, text-shadow 0.2s, transform 0.2s;
+    }
+
+    .navbar-brand:hover span {
+      color: #fff !important;
+      text-shadow: 0 0 8px #fff, 0 0 16px #007bff, 0 2px 8px rgba(0, 0, 0, 0.15);
+      transform: scale(1.2) translateY(-2px);
+    }
+
+    .navbar-nav .nav-link {
+      color: #fff !important;
+    }
+
+    .navbar-nav .nav-link:hover,
+    .navbar-nav .nav-link:focus {
+      color: #fff !important;
+      text-decoration: none;
+    }
+
+    .pop-on-hover-global {
+      transition: transform 0.2s;
+      display: inline-block;
+    }
+
+    .pop-on-hover-global:hover {
+      transform: scale(1.04) translateY(-1px);
+    }
+
+    /* ✨ Glare Effect */
+    .glare-hover {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .glare-hover::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg,
+          hsla(0, 0%, 0%, 0) 60%,
+          rgba(255, 255, 255, 0.2) 70%,
+          hsla(0, 0%, 0%, 0) 100%);
+      background-size: 300% 300%;
+      background-repeat: no-repeat;
+      background-position: -100% -100%;
+      transition: background-position 0.6s ease;
+      pointer-events: none;
+    }
+
+    .glare-hover:hover::before {
+      background-position: 100% 100%;
+    }
+
+    /* New styles for long-page elements */
+    .feature-icon {
+      font-size: 2.2rem;
+      line-height: 1;
+    }
+
+    .section-muted {
+      color: #6c757d;
+    }
+
+    .testimonial {
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.02), rgba(0, 0, 0, 0.02));
+      border-left: 4px solid #0d6efd;
+      padding: 1rem;
+      border-radius: 6px;
+    }
+
+    #backToTop {
+      position: fixed;
+      right: 20px;
+      bottom: 24px;
+      display: none;
+      z-index: 999;
+    }
+
+    footer {
+      margin-top: 3rem;
+      padding: 2rem 0;
+      background: #121212;
+      color: #ddd;
+    }
+
+    /* subtle pop-on-hover for more text boxes and form controls */
+    .pop-hover-apply,
+    .card .card-body p,
+    .card .card-title,
+    .card .card-text,
+    .card .list-group-item,
+    .section-muted,
+    .feature-icon,
+    .testimonial,
+    .accordion-button,
+    .table td,
+    .table th,
+    input.form-control,
+    textarea.form-control,
+    select.form-select,
+    .nav-link,
+    .alert,
+    footer {
+      transition: transform 0.18s ease, box-shadow 0.18s ease;
+    }
+
+    /* hover and focus: subtle lift + soft shadow */
+    .pop-hover-apply:hover,
+    .card .card-body p:hover,
+    .card .card-title:hover,
+    .card .card-text:hover,
+    .card .list-group-item:hover,
+    .section-muted:hover,
+    .feature-icon:hover,
+    .testimonial:hover,
+    .accordion-button:hover,
+    .table td:hover,
+    .table th:hover,
+    input.form-control:hover,
+    textarea.form-control:hover,
+    select.form-select:hover,
+    .nav-link:hover,
+    .alert:hover,
+    footer:hover,
+    input.form-control:focus,
+    textarea.form-control:focus,
+    select.form-select:focus,
+    .accordion-button:focus {
+      transform: translateY(-3px) scale(1.02);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.10);
+      z-index: 2;
+    }
+
+    /* keep inputs visually stable when focused (no margin/flow jump) */
+    input.form-control,
+    textarea.form-control,
+    select.form-select {
+      will-change: transform;
+      backface-visibility: hidden;
+    }
+
+    /* optional: small pointer cursor for clickable elements that are not links */
+    .card .card-body p.clickable,
+    .table td.clickable,
+    .table th.clickable {
+      cursor: pointer;
+    }
+
+    .feature-cards-offset {
+      margin-top: 150px;
+      /* move cards lower on wide screens */
+    }
+
+    /* responsive fallback for small screens so cards remain visible above fold */
+    @media (max-width: 767px) {
+      .feature-cards-offset {
+        margin-top: 60px;
+      }
+    }
+
+    .emph {
+      font-weight: 600;
+      /* subtle stronger weight */
+    }
+
+    /* slightly stronger lead text */
+    .lead,
+    .info-section p {
+      font-weight: 500;
+    }
+
+    /* Smooth fade-in animation for scroll effect */
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(40px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .fade-in-scroll {
+      opacity: 0;
+      transform: translateY(40px);
+    }
+
+    .fade-in-scroll.visible {
+      animation: fadeInUp 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    }
+
+    /* Staggered animation delays for child elements */
+    .fade-in-scroll.visible>* {
+      animation: fadeInUp 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    }
+
+    .fade-in-scroll.visible>*:nth-child(1) {
+      animation-delay: 0.05s;
+    }
+
+    .fade-in-scroll.visible>*:nth-child(2) {
+      animation-delay: 0.1s;
+    }
+
+    .fade-in-scroll.visible>*:nth-child(3) {
+      animation-delay: 0.15s;
+    }
+
+    .fade-in-scroll.visible>*:nth-child(4) {
+      animation-delay: 0.2s;
+    }
+
+    .info-section {
+      background: linear-gradient(135deg, rgba(13, 110, 253, 0.03), rgba(0, 123, 255, 0.02));
+      border-left: 5px solid #0d6efd;
+      padding: 2rem;
+      border-radius: 8px;
+      margin-top: 2rem !important;
+    }
+
+    .info-section h4 {
+      color: #0d6efd;
+      margin-bottom: 1.5rem;
+    }
+
+    .info-section h5 {
+      color: #0056b3;
+      margin-top: 1rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .info-section ul {
+      padding-left: 1.5rem;
+    }
+
+    .info-section li {
+      margin-bottom: 0.75rem;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+
+<body class="p-4">
+  <header>
+    {% with messages = get_flashed_messages() %}
+    {% if messages %}
+    <ul class="flashes">
+      {% for msg in messages %}
+      <li>{{ msg }}</li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+    {% endwith %}
+
+    {% if current_user %}
+    <div>
+      Welcome {{ current_user }} — <a href="{{ url_for('logout') }}">Logout</a>
+    </div>
+    {% else %}
+    <!-- not used 
+    <div>
+      <a href="{{ url_for('login', next=request.path) }}">Login</a>
+      or
+      <a href="{{ url_for('signup', next=request.path) }}">Sign up</a>
+      to use this feature
+    </div>
+-->
+    {% endif %}
+  </header>
+
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="/">
+        <span>E</span><span>x</span><span>p</span><span>e</span><span>n</span><span>s</span><span>e</span>
+        <span> </span>
+        <span>T</span><span>r</span><span>a</span><span>c</span><span>k</span><span>i</span><span>n</span><span>g</span>
+      </a>
+      <div class="navbar-nav">
+        <a class="nav-link hover-glow text-white" href="/add_sale">Add Sale</a>
+        <a class="nav-link hover-glow text-white" href="/add_expense">Add Expense</a>
+        <a class="nav-link hover-glow text-white" href="/report">Report</a>
+        <a class="nav-link hover-glow text-white" href="/Budget">Budget</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container">
+    <!-- Hero / landing intro (REPLACED) -->
+    <section class="text-center py-4">
+      <h1 class="mb-3 pop-on-hover-global display-5">Welcome Dealer</h1>
+
+      <p class="lead mx-auto mb-3" style="max-width:960px; line-height:1.45;">
+        <strong class="emph">Expense Tracking</strong> is a lightweight tool built for busy dealers who want clear
+        financial visibility without heavyweight software.
+        <strong class="emph">Quickly record sales</strong>, <strong class="emph">capture every expense</strong>
+        (salaries, deliveries, utility bills and one‑offs),
+        and get <strong class="emph">month-by-month summaries</strong> that help you spot trends and protect margins —
+        all from a simple, responsive dashboard.
+      </p>
+
+      <div class="d-flex justify-content-center gap-2 mb-3">
+        {% if not current_user %}
+        <!-- Guests: encourage signup/login with next param so they return to this page -->
+        <a class="btn btn-success btn-lg pop-on-hover-global" href="{{ url_for('signup', next=request.path) }}">Sign
+          up</a>
+        <a class="btn btn-outline-primary btn-lg pop-on-hover-global"
+          href="{{ url_for('login', next=request.path) }}">Log in</a>
+        {% endif %}
+      </div>
+
+      <div class="mx-auto text-muted" style="max-width:900px;">
+        <p class="mb-2"><strong class="emph">How this works</strong></p>
+        <ul class="text-start d-inline-block section-muted" style="max-width:700px;">
+          <li><strong class="emph">One-time signup</strong> — your session remains active so you won't need to sign in
+            repeatedly (configurable session lifetime).</li>
+          <li><strong class="emph">Fast entry forms</strong> for Sales and Expenses so you can log transactions during
+            the day without interruption.</li>
+          <li><strong class="emph">Built-in reporting</strong> visualizes Sales vs Expenses and shows profit so you can
+            act on the insights.</li>
+          <li><strong class="emph">Local data & backups</strong> — data stays in your database file; use
+            <code>scripts/dump_db.py</code> to export copies.
+          </li>
+        </ul>
+
+        <p class="mt-3">
+          <strong class="emph">Ready to keep your books tidy and your margins healthy?</strong> Sign up to get started —
+          or log in if you already have an account.
+          If you're already signed in, use the buttons above to add a sale or expense immediately.
+        </p>
+      </div>
+    </section>
+    <!-- end hero / landing intro -->
+
+    <!-- add a gentle separator -->
+    <hr class="my-4">
+
+    <div class="info-section pop-on-hover-global">
+      <h4 class="pop-on-hover-global">About <strong class="emph">Expense Tracking</strong></h4>
+      <p class="pop-on-hover-global">
+        <strong class="emph">Expense Tracking</strong> is a modern web application designed specifically for dealers and
+        business owners to simplify and streamline financial management.
+        It provides a seamless, intuitive way to record sales and expenses, categorize transactions with precision, and
+        generate insightful reports that drive decision-making.
+      </p>
+
+      <div class="row mt-4">
+        <div class="col-md-6">
+          <h5 class="pop-on-hover-global"><strong class="emph">Why Choose Expense Tracking?</strong></h5>
+          <ul class="section-muted">
+            <li class="pop-on-hover-global"><strong class="emph">Real-time Financial Visibility</strong> — Track your
+              income and expenses as they happen, giving you instant insights into your business health.</li>
+            <li class="pop-on-hover-global"><strong class="emph">Easy-to-use Interface</strong> — Designed for quick
+              data entry and intuitive review, so you can focus on running your business.</li>
+            <li class="pop-on-hover-global"><strong class="emph">Responsive Design</strong> — Works seamlessly on
+              desktops, tablets, and mobile devices for on-the-go tracking.</li>
+            <li class="pop-on-hover-global"><strong class="emph">Interactive Charts</strong> — Visualize your business
+              performance with professional charts and graphs.</li>
+          </ul>
+        </div>
+
+        <div class="col-md-6">
+          <h5 class="pop-on-hover-global"><strong class="emph">Key Features</strong></h5>
+          <ul class="section-muted">
+            <li class="pop-on-hover-global"><strong class="emph">Detailed Breakdowns</strong> — Categorized expense and
+              sales analysis for deeper insights into your operations.</li>
+            <li class="pop-on-hover-global"><strong class="emph">Monthly & Yearly Trends</strong> — Identify patterns to
+              help you plan and grow your business strategically.</li>
+            <li class="pop-on-hover-global"><strong class="emph">Secure & Private</strong> — Your data stays with you;
+              no cloud dependencies or third-party access.</li>
+            <li class="pop-on-hover-global"><strong class="emph">Budget Planning</strong> — Set budgets for different
+              expense categories and monitor your actual spending.</li>
+          </ul>
+        </div>
+      </div>
+
+      <p class="pop-on-hover-global mt-4">
+        Whether you are managing a small showroom or a large dealership, <strong class="emph">Expense Tracking</strong>
+        helps you stay organized, identify cost-saving opportunities,
+        and make smarter financial decisions based on real data. Scroll down to explore features, tips, and your
+        financial summary.
+      </p>
+    </div>
+
+    <!-- Intro before cards -->
+    <section class="text-center mb-4 mt-5">
+      <h3 class="mb-3 pop-on-hover-global">Get Started in Minutes</h3>
+      <p class="lead section-muted mb-3" style="max-width:900px; margin-left: auto; margin-right: auto;">
+        Here you can easily add your sales, track your expenses, view detailed reports, and manage your budgets all in
+        one place.
+        Our simple forms make it quick to record transactions, while powerful analytics help you understand your
+        business better.
+        Whether you're adding a daily sale or tracking monthly expenses, we've got you covered with an intuitive,
+        easy-to-use interface designed for busy business owners like you.
+      </p>
+    </section>
+
+    <!-- FEATURE CARDS ROW (moved down by CSS) -->
+    <div id="featureCardsRow" class="row mb-4 feature-cards-offset">
+      <!-- Sales Management Card -->
+      <div class="col-md-3">
+        <div class="card border-success mb-3 hover-glow pop-on-hover-global glare-hover h-100">
+          <div class="card-header bg-success text-white pop-on-hover-global">Sales Management</div>
+          <div class="card-body d-flex flex-column">
+            <h5 class="card-title pop-on-hover-global">Record Your Sales</h5>
+            <p class="card-text pop-on-hover-global">
+              Log every sale with product details, quantity sold, and price. The system automatically calculates total
+              sales amounts for you.
+            </p>
+            <ul class="pop-on-hover-global">
+              <li>Instantly add new sales records</li>
+              <li>Track products and quantities sold</li>
+              <li>Automatic total calculation</li>
+            </ul>
+            <div class="mt-auto">
+              <p class="text-muted small pop-on-hover-global">Keep your sales organized and accessible.</p>
+              <a href="/add_sale" class="btn btn-outline-success hover-glow">Add Sale</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Expense Tracking Card -->
+      <div class="col-md-3">
+        <div class="card border-info mb-3 hover-glow pop-on-hover-global glare-hover h-100">
+          <div class="card-header bg-info text-white pop-on-hover-global">Expense Tracking</div>
+          <div class="card-body d-flex flex-column">
+            <h5 class="card-title pop-on-hover-global">Monitor Your Outflows</h5>
+            <p class="card-text pop-on-hover-global">
+              Track all your expenses including staff salaries, delivery costs, and miscellaneous bills like
+              electricity.
+            </p>
+            <ul class="pop-on-hover-global">
+              <li>Staff expenses tracking</li>
+              <li>Delivery expenses monitoring</li>
+              <li>Miscellaneous costs tracking</li>
+            </ul>
+            <div class="mt-auto">
+              <p class="text-muted small pop-on-hover-global">Stay on top of your spending.</p>
+              <a href="/add_expense" class="btn btn-outline-info hover-glow">Add Expense</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Reports & Analytics Card -->
+      <div class="col-md-3">
+        <div class="card border-warning mb-3 hover-glow pop-on-hover-global glare-hover h-100">
+          <div class="card-header bg-warning text-dark pop-on-hover-global">Reports & Analytics</div>
+          <div class="card-body d-flex flex-column">
+            <h5 class="card-title pop-on-hover-global">Visualize Performance</h5>
+            <p class="card-text pop-on-hover-global">
+              Access detailed reports to analyze your showroom's financial health with interactive charts.
+            </p>
+            <ul class="pop-on-hover-global">
+              <li>Monthly comparisons</li>
+              <li>Interactive charts</li>
+              <li>Growth opportunities</li>
+            </ul>
+            <div class="mt-auto">
+              <p class="text-muted small pop-on-hover-global">Make informed decisions with data.</p>
+              <a href="/report" class="btn btn-outline-warning hover-glow">View Report</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Budget Management Card -->
+      <div class="col-md-3">
+        <div class="card border-primary mb-3 hover-glow pop-on-hover-global glare-hover h-100">
+          <div class="card-header bg-primary text-white pop-on-hover-global">Budget Management</div>
+          <div class="card-body d-flex flex-column">
+            <h5 class="card-title pop-on-hover-global">Plan Your Finances</h5>
+            <p class="card-text pop-on-hover-global">
+              Set and track your budgets for different expense categories. Monitor your spending against planned
+              budgets.
+            </p>
+            <ul class="pop-on-hover-global">
+              <li>Set monthly budgets</li>
+              <li>Track actual spending</li>
+              <li>Budget alerts</li>
+            </ul>
+            <div class="mt-auto">
+              <p class="text-muted small pop-on-hover-global">Stay within your financial plans.</p>
+              <a href="/Budget" class="btn btn-outline-primary hover-glow">View Budget</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="alert alert-warning pop-on-hover-global">
+      <strong>Tip:</strong> Use the <a href="/report" class="alert-link">Report</a> section to visualize your sales and
+      expenses with interactive charts. Toggle between months to analyze trends and make informed decisions for your
+      showroom.
+    </div>
+
+    <!-- -------------------- NEW LONGER CONTENT STARTS HERE -------------------- -->
+
+    <hr class="my-4">
+
+    <!-- Features -->
+    <section id="features" class="mb-5">
+      <h4 class="mb-3">Core Features</h4>
+      <div class="row gy-3">
+        <div class="col-md-4">
+          <div class="card h-100 glare-hover hover-glow">
+            <div class="card-body">
+              <div class="d-flex align-items-start gap-3">
+                <div class="feature-icon text-success">💸</div>
+                <div>
+                  <h5 class="card-title">Smart Sales Entries</h5>
+                  <p class="card-text section-muted">Quickly add product details, quantities and pricing. Totals compute
+                    automatically and are stored for trend analysis.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-4">
+          <div class="card h-100 glare-hover hover-glow">
+            <div class="card-body">
+              <div class="d-flex align-items-start gap-3">
+                <div class="feature-icon text-info">🧾</div>
+                <div>
+                  <h5 class="card-title">Detailed Expense Categories</h5>
+                  <p class="card-text section-muted">Separate salaries, deliveries, utilities, and one-off expenses to
+                    understand cash outflows at a glance.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-4">
+          <div class="card h-100 glare-hover hover-glow">
+            <div class="card-body">
+              <div class="d-flex align-items-start gap-3">
+                <div class="feature-icon text-warning">📊</div>
+                <div>
+                  <h5 class="card-title">Reports & Insights</h5>
+                  <p class="card-text section-muted">Graphical charts compare monthly sales to expenses and reveal
+                    trends you can act on.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- How it works -->
+    <section id="how" class="mb-5">
+      <h4 class="mb-3">How it works</h4>
+      <div class="row gy-3">
+        <div class="col-md-3">
+          <div class="card h-100 text-center">
+            <div class="card-body">
+              <div class="mb-2">1</div>
+              <h6>Enter Data</h6>
+              <p class="small section-muted">Add sales and expenses using simple forms.</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card h-100 text-center">
+            <div class="card-body">
+              <div class="mb-2">2</div>
+              <h6>Review Totals</h6>
+              <p class="small section-muted">See aggregated totals per month automatically.</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card h-100 text-center">
+            <div class="card-body">
+              <div class="mb-2">3</div>
+              <h6>Analyze</h6>
+              <p class="small section-muted">Use charts to compare revenue and costs.</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card h-100 text-center">
+            <div class="card-body">
+              <div class="mb-2">4</div>
+              <h6>Act</h6>
+              <p class="small section-muted">Make changes: reduce costs or promote top products.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Monthly insights (Chart.js embedded) -->
+    <section id="insights" class="mb-5">
+      <h4 class="mb-3">Monthly Insights</h4>
+      <div class="row">
+        <div class="col-lg-8 mb-3">
+          <div class="card p-3 glare-hover hover-glow">
+            <div style="height: 360px;">
+              <canvas id="monthlyChart" style="max-height:100%; width:100%;"></canvas>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-4">
+          <div class="card p-3">
+            <h6>Quick Summary</h6>
+            <ul class="mb-0 section-muted">
+              <li>Average monthly revenue: — (see report)</li>
+              <li>Top performing product categories: —</li>
+              <li>Largest expense drivers: salaries, deliveries</li>
+            </ul>
+            <hr>
+            <small class="text-muted">Example of an data chart </small>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tips and best practices -->
+    <section id="tips" class="mb-5">
+      <h4 class="mb-3">Tips & Best Practices</h4>
+      <div class="row">
+        <div class="col-md-6">
+          <ul class="section-muted">
+            <li>Record sales daily to avoid backlog and errors.</li>
+            <li>Categorize each expense — it makes monthly budgeting accurate.</li>
+            <li>Compare the same month across years to see real growth.</li>
+          </ul>
+        </div>
+        <div class="col-md-6">
+          <ul class="section-muted">
+            <li>Use reports to spot seasonal trends and adjust stock.</li>
+            <li>Track driver costs separately to evaluate delivery efficiency.</li>
+            <li>Back up the database regularly (scripts/dump_db.py can help).</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- FAQ accordion -->
+    <section id="faq" class="mb-5">
+      <h4 class="mb-3">Frequently Asked Questions</h4>
+      <div class="accordion" id="faqAccordion">
+        <div class="accordion-item">
+          <h2 class="accordion-header" id="faqHeadingOne">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faqOne"
+              aria-expanded="false" aria-controls="faqOne">
+              Can I export reports?
+            </button>
+          </h2>
+          <div id="faqOne" class="accordion-collapse collapse" aria-labelledby="faqHeadingOne"
+            data-bs-parent="#faqAccordion">
+            <div class="accordion-body">
+              Reports are viewable in the Report section; you can implement CSV/Excel export from there. The UI is
+              designed to make hooking exports straightforward.
+            </div>
+          </div>
+        </div>
+
+        <div class="accordion-item">
+          <h2 class="accordion-header" id="faqHeadingTwo">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faqTwo"
+              aria-expanded="false" aria-controls="faqTwo">
+              How do I backup my data?
+            </button>
+          </h2>
+          <div id="faqTwo" class="accordion-collapse collapse" aria-labelledby="faqHeadingTwo"
+            data-bs-parent="#faqAccordion">
+            <div class="accordion-body">
+              A simple way is to run the included backup script in `scripts/dump_db.py` or periodically copy the
+              database file to a safe location.
+            </div>
+          </div>
+        </div>
+
+        <div class="accordion-item">
+          <h2 class="accordion-header" id="faqHeadingThree">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+              data-bs-target="#faqThree" aria-expanded="false" aria-controls="faqThree">
+              Is multi-user support available?
+            </button>
+          </h2>
+          <div id="faqThree" class="accordion-collapse collapse" aria-labelledby="faqHeadingThree"
+            data-bs-parent="#faqAccordion">
+            <div class="accordion-body">
+              This version focuses on single-dealer workflows. Multi-user or role-based features can be added later
+              (authentication and per-user data partitioning).
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Testimonials -->
+    <section id="testimonials" class="mb-5">
+      <h4 class="mb-3">What dealers say</h4>
+      <div class="row">
+        <div class="col-md-4">
+          <div class="testimonial mb-3">
+            <strong>Ravi, Showroom Owner</strong>
+            <p class="mb-0 section-muted">"Simple, fast and gives me clear monthly snapshots. Helps manage staff payouts
+              easier."</p>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="testimonial mb-3">
+            <strong>Meera, Manager</strong>
+            <p class="mb-0 section-muted">"The report comparisons are useful — we found unnecessary costs and reduced
+              them the next month."</p>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="testimonial mb-3">
+            <strong>Arjun, Dealer</strong>
+            <p class="mb-0 section-muted">"Recording sales as they happen made reconciliation so much easier."</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Release notes / changelog -->
+    <section id="changelog" class="mb-5">
+      <h4 class="mb-3">Release Notes</h4>
+      <ul class="section-muted">
+        <li><strong>v1.2</strong> — Improved reporting UX and fixed calculation edge-cases.</li>
+        <li><strong>v1.1</strong> — Added expense categories and driver cost tracking.</li>
+        <li><strong>v1.0</strong> — Initial release with sales & expense forms and report page.</li>
+      </ul>
+    </section>
+
+    <!-- Contact -->
+    <section id="contact" class="mb-5">
+      <h4 class="mb-3">Contact & Support</h4>
+      <p class="section-muted">For help, feature requests or feedback, email: <a
+          href="mailto:support@example.com">support@example.com</a></p>
+      <p class="section-muted small">If you need a custom report/export or multi-user setup, reply with details and we
+        can add it.</p>
+    </section>
+
+    <!-- Footer -->
+    <footer class="text-center">
+      <div class="container">
+        <p class="mb-1">&copy; <span id="year"></span> Expense Tracking</p>
+        <small class="section-muted">Built for dealers — record, analyze, and grow.<br>Developed By: Prakhar Malviya,
+          Mohd Ayan & Pratik Vishwakarma</small>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Back to top button -->
+  <button id="backToTop" class="btn btn-primary btn-lg rounded-circle" title="Back to top">↑</button>
+
+  <!-- Bootstrap JS (for accordion and interactive components) -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <script>
+    // Show current year in footer
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    // Back-to-top button behavior
+    const backBtn = document.getElementById('backToTop');
+    window.addEventListener('scroll', () => {
+      if (window.scrollY > 300) {
+        backBtn.style.display = 'block';
+      } else {
+        backBtn.style.display = 'none';
+      }
+    });
+    backBtn.addEventListener('click', () => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
+    // Monthly Insights Chart: tries to fetch real data, falls back to sample
+    document.addEventListener('DOMContentLoaded', async () => {
+      const ctx = document.getElementById('monthlyChart').getContext('2d');
+
+      // Sample fallback data (replace by providing the API below)
+      const sampleData = {
+        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+        sales: [12000, 9800, 13500, 14200, 12800, 15300, 16700, 15800, 14900, 16200, 17000, 18000],
+        expenses: [8000, 7600, 9200, 10100, 9400, 11000, 11500, 10900, 10500, 11200, 11800, 12500]
+      };
+
+      // Try fetch from a backend endpoint; expected JSON:
+      // { labels: [...], sales: [...], expenses: [...] }
+      async function fetchMonthlySummary() {
+        try {
+          const resp = await fetch('/api/monthly_summary'); // change this path to your real API
+          if (!resp.ok) throw new Error('not ok');
+          const json = await resp.json();
+          if (json && json.labels && json.sales && json.expenses) return json;
+          throw new Error('invalid format');
+        } catch (e) {
+          return sampleData;
+        }
+      }
+
+      const data = await fetchMonthlySummary();
+
+      const chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: data.labels,
+          datasets: [
+            {
+              type: 'bar',
+              label: 'Sales',
+              data: data.sales,
+              backgroundColor: 'rgba(13,110,253,0.85)',
+              borderColor: 'rgba(13,110,253,1)',
+              borderWidth: 1,
+            },
+            {
+              type: 'bar',
+              label: 'Expenses',
+              data: data.expenses,
+              backgroundColor: 'rgba(220,53,69,0.85)',
+              borderColor: 'rgba(220,53,69,1)',
+              borderWidth: 1,
+            },
+            {
+              type: 'line',
+              label: 'Profit',
+              data: data.labels.map((_, i) => (data.sales[i] || 0) - (data.expenses[i] || 0)),
+              borderColor: 'rgba(40,167,69,1)',
+              backgroundColor: 'rgba(40,167,69,0.1)',
+              tension: 0.25,
+              pointRadius: 3,
+              yAxisID: 'y',
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: {
+            mode: 'index',
+            intersect: false
+          },
+          plugins: {
+            tooltip: { enabled: true, mode: 'index', intersect: false },
+            legend: { position: 'top' }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: { display: true, text: 'Amount' }
+            }
+          }
+        }
+      });
+    });
+  </script>
+</body>
+
+</html>
