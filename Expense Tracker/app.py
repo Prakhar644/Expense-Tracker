@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash, g, abort, jsonify
 import sqlite3
+import turso_serverless
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 import os
@@ -12,32 +13,60 @@ app.secret_key = os.environ.get('FLASK_SECRET', 'change_this_to_a_random_secret'
 # Make sessions "permanent" by default and set lifetime (e.g., 7 days)
 app.permanent_session_lifetime = timedelta(days=7)
 
-# Configure your DB file (adjust if your app uses a different path)
-DATABASE = os.path.join(os.path.dirname(__file__), 'app.db')
-
 def get_db():
     db = getattr(g, '_database', None)
+
     if db is None:
-        db = g._database = sqlite3.connect(DATABASE)
-        db.row_factory = sqlite3.Row
+        db = g._database = turso_serverless.connect(
+            os.environ["TURSO_DATABASE_URL"],
+            auth_token=os.environ["TURSO_AUTH_TOKEN"]
+        )
+
     return db
+
 
 @app.teardown_appcontext
 def close_connection(exception):
     db = getattr(g, '_database', None)
+
     if db is not None:
         db.close()
 
+
+class DBRow(dict):
+    """SQLite Row-like object that supports both row['column'] and row[0]."""
+
+    def __init__(self, columns, values):
+        super().__init__(zip(columns, values))
+        self._values = values
+
+    def __getitem__(self, key):
+        if isinstance(key, int):
+            return self._values[key]
+        return super().__getitem__(key)
+
+
 def query_db(query, args=(), one=False):
     cur = get_db().execute(query, args)
-    rv = cur.fetchall()
+
+    rows = cur.fetchall()
+
+    if cur.description:
+        columns = [column[0] for column in cur.description]
+        rows = [DBRow(columns, row) for row in rows]
+
     cur.close()
-    return (rv[0] if rv else None) if one else rv
+
+    return (rows[0] if rows else None) if one else rows
+
 
 def execute_db(query, args=()):
     conn = get_db()
+
     cur = conn.execute(query, args)
+
     conn.commit()
+
     cur.close()
 
 # Simple helper to get current user in templates
@@ -116,15 +145,41 @@ def logout():
 
 # Initialize DB
 def init_db():
-    conn = sqlite3.connect("database.db")
+    conn = get_db()
     cur = conn.cursor()
-    cur.execute("CREATE TABLE IF NOT EXISTS sales(id INTEGER PRIMARY KEY, item TEXT, amount REAL, date TEXT)")
-    cur.execute("CREATE TABLE IF NOT EXISTS expenses(id INTEGER PRIMARY KEY, detail TEXT, amount REAL, date TEXT)")
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL UNIQUE,
+            password_hash TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS sales (
+            id INTEGER PRIMARY KEY,
+            item TEXT,
+            amount REAL,
+            date TEXT
+        )
+    """)
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS expenses (
+            id INTEGER PRIMARY KEY,
+            detail TEXT,
+            amount REAL,
+            date TEXT
+        )
+    """)
+
     conn.commit()
     conn.close()
 
-init_db()
 
+init_db()
 
 # Example: protect add_sale route
 @app.route('/add_sale', methods=['GET', 'POST'])
@@ -134,7 +189,7 @@ def add_sale():
         item = request.form["item"]
         amount = float(request.form["amount"])
         date = request.form["date"]
-        conn = sqlite3.connect("database.db")
+        conn = get_db()
         cur = conn.cursor()
         cur.execute("INSERT INTO sales(item, amount, date) VALUES (?, ?, ?)", (item, amount, date))
         conn.commit()
@@ -142,7 +197,7 @@ def add_sale():
         flash("✅ Sale added successfully!", "success")
         return redirect("/add_sale")
 
-    conn = sqlite3.connect("database.db")
+    conn = get_db()
     cur = conn.cursor()
     cur.execute("SELECT * FROM sales")
     sales = cur.fetchall()
@@ -152,7 +207,7 @@ def add_sale():
 @app.route("/delete_sale/<int:sale_id>")
 @login_required
 def delete_sale(sale_id):
-    conn = sqlite3.connect("database.db")
+    conn = get_db()
     cur = conn.cursor()
     cur.execute("DELETE FROM sales WHERE id=?", (sale_id,))
     conn.commit()
@@ -168,7 +223,7 @@ def add_expense():
         detail = request.form["detail"]
         amount = float(request.form["amount"])
         date = request.form["date"]
-        conn = sqlite3.connect("database.db")
+        conn = get_db()
         cur = conn.cursor()
         cur.execute("INSERT INTO expenses(detail, amount, date) VALUES (?, ?, ?)", (detail, amount, date))
         conn.commit()
@@ -176,7 +231,7 @@ def add_expense():
         flash("✅ Expense added successfully!", "success")
         return redirect("/add_expense")
 
-    conn = sqlite3.connect("database.db")
+    conn = get_db()
     cur = conn.cursor()
     cur.execute("SELECT * FROM expenses")
     expenses = cur.fetchall()
@@ -187,7 +242,7 @@ def add_expense():
 @app.route("/delete_expense/<int:expense_id>")
 @login_required
 def delete_expense(expense_id):
-    conn = sqlite3.connect("database.db")
+    conn = get_db()
     cur = conn.cursor()
     cur.execute("DELETE FROM expenses WHERE id=?", (expense_id,))
     conn.commit()
@@ -204,7 +259,7 @@ def api_expenses():
     POST /api/expenses (json)         -> add expense {detail, amount, date}
     DELETE /api/expenses?month=YYYY-MM -> delete all expenses for month
     """
-    conn = sqlite3.connect("database.db")
+    conn = get_db()
     cur = conn.cursor()
     if request.method == 'GET':
         month = request.args.get('month')
@@ -256,7 +311,7 @@ def report():
     # Always sort ascending
     order = 'asc'
 
-    conn = sqlite3.connect("database.db")
+    conn = get_db()
     cur = conn.cursor()
 
     # Totals and lists for the selected month (using prefix YYYY-MM of date column which is stored as YYYY-MM-DD)
