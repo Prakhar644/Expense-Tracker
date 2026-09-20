@@ -86,6 +86,9 @@
       <input class="form-control" type="text" id="rentProperty" placeholder="Property / Location">
       <input class="form-control" type="number" id="rentMonths" placeholder="Months">
       <input class="form-control" type="number" step="0.01" id="rentMonthly" placeholder="Monthly Rent">
+      <input class="form-control" type="number" step="0.01" id="rentTotal" placeholder="Total Rent" readonly>
+
+</div>
 
 
     </div>
@@ -385,6 +388,10 @@
         form.addEventListener('submit', function (e) {
           const cat = (get('category') && get('category').value) || 'manual';
           updateDetailForCategory(cat || 'manual');
+          if (cat === 'rents') {
+    calcRentTotal();
+    setNameIf('rentTotal', 'amount');
+       }
 
           // show a small disabled state on the button for feedback
           const btn = this.querySelector('button[type="submit"]') || this.querySelector('button');
